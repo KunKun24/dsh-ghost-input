@@ -1,5 +1,12 @@
 # dsh-ghost-input
 
+[简体中文](README.md) · [**English**](README.en.md)
+
+![version](https://img.shields.io/badge/version-0.1.0-blue)
+![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
+![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
+![license](https://img.shields.io/badge/license-MIT-2ea44f)
+
 Inline continuation (ghost text) for the DeepSeek Harness composer — stop typing, and the model writes the rest of the sentence in grey right after the caret. Press `Tab` to keep it.
 
 > A plugin for DeepSeek Harness (DSH). Without DSH there is nothing for it to run in.
@@ -65,6 +72,16 @@ The browser-side pause is fixed at 600 ms (edit `DEFAULTS` at the top of `client
 - The composer is a host-owned Lexical `contenteditable`, and DSH does not expose its editing API to plugins, so this plugin drives it through DOM events. A large composer rewrite may need a matching update here.
 - The grey continuation is drawn by the last paragraph's `::after`, right after the caret; the plugin yields while an official command hint or an IME composition is showing.
 - Very short drafts (one or two characters) still request a completion; whether to continue is the model's call, at the cost of one tiny request.
+
+## AI disclosure
+
+This plugin's code and documentation were written with **AIGC (AI-generated content) assistance** and have been reviewed by a human:
+
+- Every line was read and edited by hand; nothing was pasted in raw
+- Behaviour was verified item by item on a live DSH instance in a headless browser: the ghost text appears, `Tab` accepts, `Esc` discards, IME composition suppresses it, and results are cached for 45 seconds
+- Before release, the host route's authentication, the model call's cost boundary and where the data goes were checked manually
+
+Human review is not a zero-defect guarantee. If reality disagrees with this document, please open an [issue](https://github.com/KunKun24/dsh-ghost-input/issues).
 
 ## License
 

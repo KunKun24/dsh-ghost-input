@@ -1,5 +1,12 @@
 # dsh-ghost-input
 
+[**简体中文**](README.md) · [English](README.en.md)
+
+![version](https://img.shields.io/badge/version-0.1.0-blue)
+![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
+![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
+![license](https://img.shields.io/badge/license-MIT-2ea44f)
+
 输入框行内续写（ghost text）——打字停下，模型在光标后补出后半句，灰色显示，`Tab` 收下。
 
 > 这是 DeepSeek Harness（DSH）的插件。没有 DSH 的话，它没地方运行。
@@ -65,6 +72,16 @@ dsh plugin install ./dsh-ghost-input
 - 输入框是宿主自绘的 Lexical `contenteditable`，插件用 DOM 事件与其交互（官方未开放 composer 的编辑接口给插件）。DSH 大改输入框结构时可能需要同步适配。
 - 灰色续写用输入框最后一段的 `::after` 渲染在光标之后；当官方命令提示（hint）正在显示、或输入法正在拼写时，插件会让位。
 - 极短草稿（一两个字）也允许请求，是否续写由模型决定——代价是一次很短的调用。
+
+## AI 使用说明
+
+本插件的代码与文档在 **AIGC（AI 生成内容）辅助**下完成，并已通过开发者的人工审阅：
+
+- 每一行代码都经过人工阅读与修改，不是直接粘贴的生成结果
+- 功能在真实 DSH 实例 + 无头浏览器中逐项验证：灰字出现、`Tab` 收下、`Esc` 丢弃、输入法期间不触发、45 秒缓存
+- 发布前人工核对了宿主侧路由的鉴权方式、模型调用的成本边界与数据去向
+
+人工审阅不等于零缺陷。使用中若发现与本文描述不符的行为，欢迎在 [Issues](https://github.com/KunKun24/dsh-ghost-input/issues) 反馈。
 
 ## 许可证
 
