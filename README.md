@@ -2,7 +2,7 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.2-blue)
+![version](https://img.shields.io/badge/version-0.2.3-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -56,7 +56,7 @@ dsh plugin install ./dsh-ghost-input
 
 ## 参数设置
 
-装好后左侧栏会多出一个 **参数设置** 入口：停顿延迟、最多显示字数、输出上限、采样温度、超时、键帽文字、接受方式（电脑 Tab / 手机轻点 / 自动）、是否带上下文，以及总开关，都在这里改。改动即时保存，下一次停顿就按新参数工作，不用刷新页面；右上角的 GitHub 卡片点一下就跳到仓库，喜欢的话给个 star。
+装好后左侧栏会多出一个 **参数设置** 入口：停顿延迟、最多显示字数、输出上限、采样温度、超时、键帽文字、接受方式（电脑 Tab / 手机轻点 / 自动）、是否带上下文，以及总开关，都在这里改。面板自己滚动，矮窗口和手机上都能翻到全部设置；改动即时保存，下一次停顿就按新参数工作，不用刷新页面；右上角的 GitHub 卡片点一下就跳到仓库，喜欢的话给个 star。
 
 滑块的范围与写入的值由宿主侧统一夹取，写进 `<DSH_HOME>/ghost-input/settings.json`（默认 `~/.dsh/ghost-input/settings.json`），插件升级不会覆盖。
 

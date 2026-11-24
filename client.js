@@ -62,6 +62,14 @@ window.__ModuleLoader__.load({
       'z-index:2147483002;',
       '}',
       '[data-ghost-pill][hidden]{display:none}',
+      '@media (max-width:560px){',
+      '[data-ghost-settings]{padding:24px 16px 48px !important}',
+      '[data-ghost-settings] [data-ghost-row]{flex-direction:column !important;align-items:stretch !important;gap:10px !important;padding:15px 0 !important}',
+      '[data-ghost-settings] [data-ghost-row] > div{width:100%}',
+      '[data-ghost-settings] [data-ghost-control]{min-width:0;justify-content:flex-start}',
+      '[data-ghost-settings] [data-ghost-control] input[type="range"]{width:100%}',
+      '[data-ghost-settings] [data-ghost-control] input[type="number"]{width:100%;max-width:160px}',
+      '}',
     ].join('');
 
     const DEFAULTS = {
@@ -185,6 +193,7 @@ window.__ModuleLoader__.load({
 
     function Row({ title, hint, children }) {
       return h('div', {
+        'data-ghost-row': '',
         style: {
           display: 'flex', alignItems: 'center', gap: 20,
           padding: '14px 0', borderBottom: '1px solid ' + LINE,
@@ -194,16 +203,16 @@ window.__ModuleLoader__.load({
           h('div', { style: { fontSize: 13.5, fontWeight: 500 } }, title),
           hint ? h('div', { style: { fontSize: 12, color: MUTED, marginTop: 3, lineHeight: 1.55 } }, hint) : null
         ),
-        h('div', { style: { flex: 'none', minWidth: 150, display: 'flex', justifyContent: 'flex-end' } }, children)
+        h('div', { 'data-ghost-control': '', style: { flex: 'none', minWidth: 150, display: 'flex', justifyContent: 'flex-end' } }, children)
       );
     }
 
     function Range({ value, min, max, step, onChange, label }) {
-      return h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+      return h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 } },
         h('input', {
           type: 'range', min, max, step, value,
           onChange: (event) => onChange(Number(event.target.value)),
-          style: { width: 110, accentColor: BRAND },
+          style: { width: 110, minWidth: 0, flex: '1 1 auto', accentColor: BRAND, touchAction: 'none' },
         }),
         h('span', { style: { fontSize: 12.5, color: MUTED, minWidth: 52, textAlign: 'right' } }, label)
       );
@@ -397,11 +406,13 @@ window.__ModuleLoader__.load({
         : h('div', { style: { padding: '40px 0', fontSize: 13, color: MUTED } }, status || t.loading);
 
       return h('div', {
+        'data-ghost-settings': '',
         style: {
-          maxWidth: 760, margin: '0 auto', padding: '38px 28px 60px',
-          fontSize: 13.5, lineHeight: 1.6,
+          height: '100%', overflowY: 'auto', boxSizing: 'border-box',
+          padding: '38px 28px 60px', fontSize: 13.5, lineHeight: 1.6,
+          overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
         },
-      }, header, body);
+      }, h('div', { style: { maxWidth: 760, margin: '0 auto' } }, header, body));
     }
 
     function registerSlots(ctx) {
