@@ -16,21 +16,23 @@ const DEFAULTS = {
   timeoutMs: 4500,
   maxSuffixChars: 80,
   maxDraftChars: 2000,
-  contextMaxChars: 1200,
+  contextMaxChars: 2000,
   cacheTtlMs: 45_000,
   cacheSize: 200,
 };
 
 const SYSTEM_PROMPT = [
-  'You are an inline completion engine for a message composer.',
-  'Given the conversation context and the text the user has typed so far, write ONLY the continuation that comes right after the draft.',
+  'You are the inline continuation engine of a chat composer.',
+  'You receive the recent conversation and the exact draft the user is typing right now. Reply with only the text that naturally comes immediately after the draft.',
   'Rules:',
-  '- Do not repeat any text that already appears in the draft.',
-  '- No quotes, no markdown, no explanations, no prefixes such as "continuation:".',
-  '- At most one sentence, at most 40 characters, stop at the first line break.',
-  '- Write in the same language as the draft.',
-  '- Continue the message the user is writing: never answer it, comment on it, or start a new sentence of your own.',
-  '- If the draft is too short, the context is insufficient, or you are not confident, return an empty string.',
+  '- Stay on the topic, tone and details of the conversation: reuse its nouns, names, numbers and decisions instead of inventing new ones.',
+  '- Continue the user\'s own sentence or thought. Never answer it, explain it, translate it, or comment on it.',
+  '- Never repeat the draft or anything already said in the conversation.',
+  '- No quotes, no markdown, no labels, no leading or trailing space, no line breaks.',
+  '- Keep it to one short clause, ideally under 30 characters.',
+  '- Match the draft\'s language, script and level of formality.',
+  '- If the draft already reads as a complete sentence, add the next clause only when it is genuinely predictable.',
+  '- If you cannot predict a useful, specific continuation, reply with nothing at all.',
 ].join('\n');
 
 function json(obj, status = 200) {
@@ -68,18 +70,20 @@ function currentSelection(ctx, sessionId) {
 function textOfEvent(event) {
   if (!event || typeof event !== 'object') return '';
   if (event.type !== 'user/message' && event.type !== 'assistant/message') return '';
+  const role = event.type === 'user/message' ? 'user' : 'assistant';
   const data = event.data && typeof event.data === 'object' ? event.data : {};
   const content = Array.isArray(data.content)
     ? data.content
     : Array.isArray(data.message?.content)
       ? data.message.content
       : [];
-  return content
+  const text = content
     .filter((block) => block && block.type === 'text' && typeof block.text === 'string')
     .map((block) => block.text.trim())
     .filter(Boolean)
     .join(' ')
-    .slice(0, 400);
+    .slice(0, 600);
+  return text ? { role, text } : undefined;
 }
 
 /** A short tail of the conversation, newest last. */
@@ -89,12 +93,25 @@ function recentContext(ctx, sessionId, limit) {
   const events = session?.events;
   if (!Array.isArray(events)) return '';
   const parts = [];
-  for (let index = events.length - 1; index >= 0 && parts.length < 6; index -= 1) {
-    const text = textOfEvent(events[index]);
-    if (text) parts.unshift(text);
+  for (let index = events.length - 1; index >= 0 && parts.length < 10; index -= 1) {
+    const entry = textOfEvent(events[index]);
+    if (entry) parts.unshift(`${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.text}`);
   }
   const joined = parts.join('\n');
   return joined.length > limit ? joined.slice(-limit) : joined;
+}
+
+/** The workspace folder name, when the session carries one. */
+function workspaceOf(ctx, sessionId) {
+  if (!sessionId) return '';
+  try {
+    const cwd = service(ctx, 'sessions')?.get?.(sessionId)?.header?.cwd;
+    if (typeof cwd === 'string' && cwd) {
+      const parts = cwd.split(/[\\/]+/u).filter(Boolean);
+      return parts.length > 0 ? parts[parts.length - 1] : '';
+    }
+  } catch {}
+  return '';
 }
 
 /** Strip the model's packaging so only the continuation survives. */
@@ -180,9 +197,12 @@ async function complete(ctx2, body) {
 
     const timer = setTimeout(() => controller.abort(), settings.timeoutMs);
     const contextText = recentContext(ctx2, sessionId, settings.contextMaxChars);
+    const workspace = workspaceOf(ctx2, sessionId);
     const userText = [
+      workspace ? `<workspace>\n${workspace}\n</workspace>` : '',
       contextText ? `<context>\n${contextText}\n</context>` : '',
       `<draft>\n${draft.slice(-settings.maxDraftChars)}\n</draft>`,
+      'Reply with the continuation text only, immediately following the draft.',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -193,7 +213,6 @@ async function complete(ctx2, body) {
     let blockText = '';
     let failure;
     let finishReason;
-    const seen = [];
     try {
       const stream = ctx2.llm.stream({
         provider: selection.provider,
@@ -207,13 +226,12 @@ async function complete(ctx2, body) {
         signal: controller.signal,
       });
       for await (const chunk of stream) {
-        if (seen.length < 12 && !seen.includes(chunk.type)) seen.push(chunk.type);
         if (chunk.type === 'text-delta' && typeof chunk.text === 'string') out += chunk.text;
         if (chunk.type === 'block-end' && chunk.block?.type === 'text' && typeof chunk.block.text === 'string') {
           blockText += chunk.block.text;
         }
         if (chunk.type === 'finish') {
-          finishReason = chunk.reason;
+          finishReason = chunk.reason?.kind ?? chunk.reason;
           if (chunk.failure) failure = chunk.failure;
         }
       }
@@ -226,18 +244,13 @@ async function complete(ctx2, body) {
 
     if (failure) {
       const code = failure?.code ?? String(failure?.message ?? failure);
-      return { ok: true, text: '', reason: `model-error:${code}`, debug: debugInfo() };
+      return { ok: true, text: '', reason: `model-error:${code}` };
     }
 
     if (!out && blockText) out = blockText;
     const text = sanitize(out, draft, settings.maxSuffixChars);
     cacheSet(key, text);
-    return { ok: true, text, ...(text ? {} : { reason: `empty:${finishReason ?? 'unknown'}` }), debug: debugInfo() };
-
-    function debugInfo() {
-      if (body?.debug !== true) return undefined;
-      return { model: `${selection.provider}/${selection.model}`, chunks: seen, finishReason, raw: out.slice(0, 200) };
-    }
+    return { ok: true, text, ...(text ? {} : { reason: `empty:${finishReason ?? 'unknown'}` }) };
   }
 
   ctx.effect(() =>

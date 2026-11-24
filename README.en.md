@@ -8,13 +8,14 @@ Inline continuation (ghost text) for the DeepSeek Harness composer — stop typi
 
 Type half a sentence in the composer and pause (about 0.6 s). The plugin asks the model currently selected for that session for a continuation and shows it as light grey text after the caret:
 
+- A small `Tab` key cap floats right after the grey text, so the shortcut is discoverable; the cap stays faint and never steals focus
 - `Tab` — accept the continuation; the caret moves to its end
 - `Esc`, keep typing, move the caret, switch session — discard immediately
 - Shown only when the caret sits at the end of the draft and nothing is selected
 - Never fires while an IME composition is open, so it does not fight candidate words
 - Skipped when the draft starts with `/` or `@` (commands and references own those)
 
-Whether a continuation is worth showing is the model's decision: a draft that is too short, a context that is too thin, or a low-confidence case returns an empty string and the plugin stays quiet.
+The continuation is grounded in the recent conversation and the draft itself, so it picks up the topic and wording already in play. Whether it is worth showing is the model's decision: a draft that is too short, a context that is too thin, or a low-confidence case returns an empty string and the plugin stays quiet.
 
 ## Install
 
@@ -45,10 +46,11 @@ The plugin row's config lives in `cordis.patch.yml` (or the plugin page). Every 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `enabled` | `true` | Master switch |
-| `maxTokens` | `48` | Output cap for one continuation |
+| `maxTokens` | `96` | Output cap for one continuation |
 | `temperature` | `0.3` | Sampling temperature; lower is steadier |
 | `timeoutMs` | `4500` | Per-request timeout; failures stay silent |
 | `maxSuffixChars` | `80` | Longest continuation shown, truncated beyond that |
+| `hintKey` | `Tab` | Text drawn on the key cap after the grey continuation |
 
 The browser-side pause is fixed at 600 ms (edit `DEFAULTS` at the top of `client.js`).
 
@@ -61,7 +63,7 @@ The browser-side pause is fixed at 600 ms (edit `DEFAULTS` at the top of `client
 ## Known limitations
 
 - The composer is a host-owned Lexical `contenteditable`, and DSH does not expose its editing API to plugins, so this plugin drives it through DOM events. A large composer rewrite may need a matching update here.
-- The grey continuation reuses the host's `p:last-child::after` hint slot and yields whenever the host's own command hint is showing.
+- The grey continuation is drawn by the last paragraph's `::after`, right after the caret; the plugin yields while an official command hint or an IME composition is showing.
 - Very short drafts (one or two characters) still request a completion; whether to continue is the model's call, at the cost of one tiny request.
 
 ## License
