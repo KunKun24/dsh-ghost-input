@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [**English**](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.1-blue)
+![version](https://img.shields.io/badge/version-0.2.2-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -24,7 +24,7 @@ Type half a sentence in the composer and pause (about 0.6 s). The plugin asks th
 - Never fires while an IME composition is open, so it does not fight candidate words
 - Skipped when the draft starts with `/` or `@` (commands and references own those)
 
-**On phones** there is no `Tab` key, so the plugin switches to touch:
+**On phones** there is no `Tab` key: switch **Accept with** to *Phone (tap)* in Settings (or pick *Auto* to follow the device — the default is desktop `Tab`), and the plugin uses touch instead:
 
 - The key cap reads “轻点” (tap) — tap the faded continuation itself (or the cap) to accept it, the keyboard stays open
 - A small `⇥ 补全` chip floats above the composer: tap to accept, **long press** to discard
@@ -56,7 +56,7 @@ Then enable the `ghost-input` row under **Plugins** and refresh the page. The bu
 
 ## Settings
 
-Installing the plugin adds a **Settings** entry to the sidebar: pause delay, longest continuation, output budget, temperature, timeout, key cap label, whether conversation context is used, and the master switch all live there. Edits save as you go and apply to the next pause without a reload; the GitHub card in the top-right corner opens the repository, so you can leave a star if you find it useful.
+Installing the plugin adds a **Settings** entry to the sidebar: pause delay, longest continuation, output budget, temperature, timeout, key cap label, how a suggestion is accepted (desktop Tab / phone tap / auto), whether conversation context is used, and the master switch all live there. Edits save as you go and apply to the next pause without a reload; the GitHub card in the top-right corner opens the repository, so you can leave a star if you find it useful.
 
 The host clamps every value it writes and stores them in `<DSH_HOME>/ghost-input/settings.json` (default `~/.dsh/ghost-input/settings.json`), so upgrading the plugin never wipes them.
 
@@ -71,6 +71,7 @@ The plugin row's config in `cordis.patch.yml` (or the plugin page) still works a
 | `timeoutMs` | `4500` | Per-request timeout; failures stay silent |
 | `maxSuffixChars` | `80` | Longest continuation shown, clipped to the line |
 | `hintKey` | `Tab` | Text drawn on the key cap after the grey continuation |
+| `acceptMode` | `keyboard` | How to accept: `keyboard` = `Tab` only; `touch` = tap the grey text or the chip; `auto` = follow the device |
 | `useContext` | `true` | Send the recent conversation tail and workspace name |
 
 ## Cost and privacy

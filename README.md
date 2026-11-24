@@ -2,7 +2,7 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.1-blue)
+![version](https://img.shields.io/badge/version-0.2.2-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -24,7 +24,7 @@
 - 输入法拼写过程中不触发，避免和候选词打架
 - 以 `/` 或 `@` 开头时跳过（那是命令和引用的地盘）
 
-**手机上**没有 `Tab` 键，插件会自动换成触摸方式：
+**手机上**没有 `Tab` 键：在参数设置里把「接受方式」切到 **手机（轻点）**（或选「自动」让插件按设备判断，默认是电脑 `Tab`），就会换成触摸方式：
 
 - 键帽文字变成「轻点」，直接**点那段灰字**（连同键帽）就能收下，键盘不会收起
 - 输入框上方会浮出一个 `⇥ 补全` 小按钮：点一下收下，**长按**丢弃
@@ -56,7 +56,7 @@ dsh plugin install ./dsh-ghost-input
 
 ## 参数设置
 
-装好后左侧栏会多出一个 **参数设置** 入口：停顿延迟、最多显示字数、输出上限、采样温度、超时、键帽文字、是否带上下文，以及总开关，都在这里改。改动即时保存，下一次停顿就按新参数工作，不用刷新页面；右上角的 GitHub 卡片点一下就跳到仓库，喜欢的话给个 star。
+装好后左侧栏会多出一个 **参数设置** 入口：停顿延迟、最多显示字数、输出上限、采样温度、超时、键帽文字、接受方式（电脑 Tab / 手机轻点 / 自动）、是否带上下文，以及总开关，都在这里改。改动即时保存，下一次停顿就按新参数工作，不用刷新页面；右上角的 GitHub 卡片点一下就跳到仓库，喜欢的话给个 star。
 
 滑块的范围与写入的值由宿主侧统一夹取，写进 `<DSH_HOME>/ghost-input/settings.json`（默认 `~/.dsh/ghost-input/settings.json`），插件升级不会覆盖。
 
@@ -71,6 +71,7 @@ dsh plugin install ./dsh-ghost-input
 | `timeoutMs` | `4500` | 单次请求超时，超时静默失败 |
 | `maxSuffixChars` | `80` | 显示的最长字数，超出按行宽截断 |
 | `hintKey` | `Tab` | 灰字后面键帽上显示的文字 |
+| `acceptMode` | `keyboard` | 收下方式：`keyboard` 只认 `Tab`；`touch` 显示「轻点」键帽与补全药丸；`auto` 按设备自动判断 |
 | `useContext` | `true` | 是否带上最近对话与工作区名 |
 
 ## 成本与隐私

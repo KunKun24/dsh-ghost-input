@@ -17,6 +17,7 @@ const DEFAULTS = {
   enabled: true,
   delayMs: 600,
   hintKey: 'Tab',
+  acceptMode: 'keyboard',
   useContext: true,
   maxTokens: 96,
   temperature: 0.3,
@@ -143,6 +144,7 @@ const CONFIG_KEYS = [
   'delayMs',
   'maxSuffixChars',
   'hintKey',
+  'acceptMode',
   'maxTokens',
   'temperature',
   'timeoutMs',
@@ -156,6 +158,8 @@ function clampNumber(value, min, max, fallback) {
 }
 
 /** Only the keys the settings panel may write, each clamped to its safe range. */
+const ACCEPT_MODES = ['keyboard', 'touch', 'auto'];
+
 function normalizeConfig(input) {
   if (!input || typeof input !== 'object') return {};
   const out = {};
@@ -170,6 +174,9 @@ function normalizeConfig(input) {
     out.temperature = clampNumber(input.temperature, 0, 1, DEFAULTS.temperature);
   }
   if (input.timeoutMs !== undefined) out.timeoutMs = clampNumber(input.timeoutMs, 500, 10000, DEFAULTS.timeoutMs);
+  if (ACCEPT_MODES.includes(input.acceptMode)) {
+    out.acceptMode = input.acceptMode;
+  }
   if (typeof input.hintKey === 'string') {
     const key = input.hintKey.trim().slice(0, 8);
     out.hintKey = key || DEFAULTS.hintKey;

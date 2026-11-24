@@ -20,6 +20,7 @@ window.__ModuleLoader__.load({
     /** True on phones/tablets, where no physical Tab key exists. */
     const isCoarsePointer = () => typeof window.matchMedia === 'function'
       && window.matchMedia('(pointer: coarse)').matches;
+
     const CSS = [
       '[data-composer-input] p[data-ghost-suffix]::after{',
       'content:attr(data-ghost-suffix) !important;',
@@ -68,6 +69,7 @@ window.__ModuleLoader__.load({
       delayMs: 600,
       maxSuffixChars: 80,
       hintKey: 'Tab',
+      acceptMode: 'keyboard',
       maxTokens: 96,
       temperature: 0.3,
       timeoutMs: 4500,
@@ -91,6 +93,8 @@ window.__ModuleLoader__.load({
         temp: ['采样温度', '越低越稳、越贴上下文；越高越发散'],
         timeout: ['超时', '超过这个时间没返回就静默放弃这次续写'],
         hint: ['键帽文字', '灰字后面那个小键帽上显示的文字'],
+        accept: ['接受方式', '电脑用 Tab 收下；手机没有 Tab 键，可以切到轻点（点灰字或补全药丸）'],
+        acceptOptions: { keyboard: '电脑（Tab）', touch: '手机（轻点）', auto: '自动' },
         context: ['带上对话上下文', '关闭后只看当前草稿，省 token 但续写会更泛'],
         reset: '恢复默认',
         saved: '已保存',
@@ -108,6 +112,8 @@ window.__ModuleLoader__.load({
         temp: ['Temperature', 'Lower stays closer to the draft and the conversation'],
         timeout: ['Timeout', 'Give up silently after this long'],
         hint: ['Key cap label', 'Text on the small key cap after the grey text'],
+        accept: ['Accept with', 'Tab on a computer; phones have no Tab key, so switch to tapping the grey text or the chip'],
+        acceptOptions: { keyboard: 'Desktop (Tab)', touch: 'Phone (tap)', auto: 'Auto' },
         context: ['Use conversation context', 'Off: only the draft, cheaper but blander'],
         reset: 'Reset defaults',
         saved: 'Saved',
@@ -156,6 +162,25 @@ window.__ModuleLoader__.load({
           transition: 'left .18s', boxShadow: '0 1px 2px rgba(0,0,0,.28)',
         },
       }));
+    }
+
+    function Segmented({ value, options, onChange }) {
+      return h('div', {
+        style: {
+          display: 'inline-flex', padding: 2, gap: 2,
+          border: '1px solid ' + LINE, borderRadius: 9,
+        },
+      }, options.map((option) => h('button', {
+        key: option.value,
+        type: 'button',
+        onClick: () => onChange(option.value),
+        style: {
+          padding: '5px 10px', fontSize: 12.5, borderRadius: 7, border: 0,
+          cursor: 'pointer',
+          background: value === option.value ? BRAND : 'transparent',
+          color: value === option.value ? '#fff' : 'inherit',
+        },
+      }, option.label)));
     }
 
     function Row({ title, hint, children }) {
@@ -338,6 +363,17 @@ window.__ModuleLoader__.load({
             h(Row, { title: t.hint[0], hint: t.hint[1] },
               h(TextBox, { value: config.hintKey, onChange: (value) => save({ hintKey: value }) })
             ),
+            h(Row, { title: t.accept[0], hint: t.accept[1] },
+              h(Segmented, {
+                value: config.acceptMode,
+                options: [
+                  { value: 'keyboard', label: t.acceptOptions.keyboard },
+                  { value: 'touch', label: t.acceptOptions.touch },
+                  { value: 'auto', label: t.acceptOptions.auto },
+                ],
+                onChange: (value) => save({ acceptMode: value }),
+              })
+            ),
             h(Row, { title: t.context[0], hint: t.context[1] },
               h(Switch, { checked: !!config.useContext, onChange: (value) => save({ useContext: value }) })
             ),
@@ -347,7 +383,7 @@ window.__ModuleLoader__.load({
                 onClick: () => save({
                   enabled: true, delayMs: 600, maxSuffixChars: 80,
                   maxTokens: 96, temperature: 0.3, timeoutMs: 4500,
-                  hintKey: 'Tab', useContext: true,
+                  hintKey: 'Tab', acceptMode: 'keyboard', useContext: true,
                 }),
                 style: {
                   padding: '7px 14px', fontSize: 12.5, borderRadius: 8,
@@ -394,6 +430,10 @@ window.__ModuleLoader__.load({
 
       /** Live settings: patch config, then whatever the settings panel saved on the host. */
       const config = { ...DEFAULTS };
+
+      /** Which accept affordance is active: the Tab key cap, or touch targets. */
+      const touchMode = () => config.acceptMode === 'touch'
+        || (config.acceptMode === 'auto' && isCoarsePointer());
       try {
         const own = ctx?.config;
         if (own !== null && typeof own === 'object') Object.assign(config, own);
@@ -435,7 +475,7 @@ window.__ModuleLoader__.load({
       badge.setAttribute('data-ghost-tab', '');
       const syncBadge = () => {
         const configured = typeof config.hintKey === 'string' && config.hintKey ? config.hintKey : 'Tab';
-        badge.textContent = configured === 'Tab' && isCoarsePointer() ? TOUCH_HINT : configured;
+        badge.textContent = configured === 'Tab' && touchMode() ? TOUCH_HINT : configured;
       };
       syncBadge();
       badge.hidden = true;
@@ -537,7 +577,7 @@ window.__ModuleLoader__.load({
         // Phones have no Tab key: the faded continuation and its key cap become
         // one tap target, with a floating chip as the fallback when that target
         // is too small to hit comfortably.
-        if (!isCoarsePointer()) {
+        if (!touchMode()) {
           hideTouchTargets();
           return;
         }
@@ -779,7 +819,11 @@ window.__ModuleLoader__.load({
       };
 
       const onViewport = () => positionBadge();
-      const onConfigEvent = (event) => adoptConfig(event?.detail);
+      const onConfigEvent = (event) => {
+        adoptConfig(event?.detail);
+        syncBadge();
+        if (state.ghost) positionBadge();
+      };
 
       // Touch: tap the faded continuation (or its key cap) to accept it; the
       // floating chip accepts on tap and discards on a long press.
