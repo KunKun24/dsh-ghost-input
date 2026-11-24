@@ -5,12 +5,19 @@
  * composer draft into a short inline continuation through the session's own
  * model. The browser half owns the caret, the grey rendering and the Tab key.
  */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
 export const name = 'ghost-input';
 
 export const inject = ['connection', 'llm'];
 
 const DEFAULTS = {
   enabled: true,
+  delayMs: 600,
+  hintKey: 'Tab',
+  useContext: true,
   maxTokens: 96,
   temperature: 0.3,
   timeoutMs: 4500,
@@ -131,8 +138,73 @@ function sanitize(raw, draft, maxChars) {
   return text.trim();
 }
 
+const CONFIG_KEYS = [
+  'enabled',
+  'delayMs',
+  'maxSuffixChars',
+  'hintKey',
+  'maxTokens',
+  'temperature',
+  'timeoutMs',
+  'useContext',
+];
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(number * 100) / 100));
+}
+
+/** Only the keys the settings panel may write, each clamped to its safe range. */
+function normalizeConfig(input) {
+  if (!input || typeof input !== 'object') return {};
+  const out = {};
+  if (typeof input.enabled === 'boolean') out.enabled = input.enabled;
+  if (typeof input.useContext === 'boolean') out.useContext = input.useContext;
+  if (input.delayMs !== undefined) out.delayMs = clampNumber(input.delayMs, 200, 1500, DEFAULTS.delayMs);
+  if (input.maxSuffixChars !== undefined) {
+    out.maxSuffixChars = clampNumber(input.maxSuffixChars, 20, 200, DEFAULTS.maxSuffixChars);
+  }
+  if (input.maxTokens !== undefined) out.maxTokens = clampNumber(input.maxTokens, 16, 512, DEFAULTS.maxTokens);
+  if (input.temperature !== undefined) {
+    out.temperature = clampNumber(input.temperature, 0, 1, DEFAULTS.temperature);
+  }
+  if (input.timeoutMs !== undefined) out.timeoutMs = clampNumber(input.timeoutMs, 500, 10000, DEFAULTS.timeoutMs);
+  if (typeof input.hintKey === 'string') {
+    const key = input.hintKey.trim().slice(0, 8);
+    out.hintKey = key || DEFAULTS.hintKey;
+  }
+  return out;
+}
+
 export function apply(ctx, config = {}) {
-  const settings = { ...DEFAULTS, ...(config && typeof config === 'object' ? config : {}) };
+  const settings = { ...DEFAULTS };
+  const patch = config && typeof config === 'object' ? config : {};
+
+  /** User settings live outside the profile so a plugin update never rewrites them. */
+  const storeDir = join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'ghost-input');
+  const storeFile = join(storeDir, 'settings.json');
+
+  function loadStored() {
+    try {
+      const raw = JSON.parse(readFileSync(storeFile, 'utf8'));
+      return normalizeConfig(raw);
+    } catch {
+      return {};
+    }
+  }
+
+  function persist(next) {
+    try {
+      mkdirSync(storeDir, { recursive: true });
+      writeFileSync(storeFile, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  Object.assign(settings, normalizeConfig(patch), loadStored());
   /** key -> { text, expires } ; text '' is a negative cache entry. */
   const cache = new Map();
   /** sessionId -> AbortController of the single in-flight request. */
@@ -196,8 +268,8 @@ async function complete(ctx2, body) {
     if (sessionId) inflight.set(sessionId, controller);
 
     const timer = setTimeout(() => controller.abort(), settings.timeoutMs);
-    const contextText = recentContext(ctx2, sessionId, settings.contextMaxChars);
-    const workspace = workspaceOf(ctx2, sessionId);
+    const contextText = settings.useContext ? recentContext(ctx2, sessionId, settings.contextMaxChars) : '';
+    const workspace = settings.useContext ? workspaceOf(ctx2, sessionId) : '';
     const userText = [
       workspace ? `<workspace>\n${workspace}\n</workspace>` : '',
       contextText ? `<context>\n${contextText}\n</context>` : '',
@@ -252,6 +324,28 @@ async function complete(ctx2, body) {
     cacheSet(key, text);
     return { ok: true, text, ...(text ? {} : { reason: `empty:${finishReason ?? 'unknown'}` }) };
   }
+
+  ctx.effect(() =>
+    ctx.connection.fetch.register({
+      path: '/api/ghost-input/config',
+      methods: ['GET', 'POST'],
+      requestBody: 'buffered',
+      fetch: async (request) => {
+        if (request.method === 'POST') {
+          let body = {};
+          try {
+            body = await request.json();
+          } catch {}
+          const stored = { ...loadStored(), ...normalizeConfig(body) };
+          persist(stored);
+          Object.assign(settings, normalizeConfig(stored));
+        }
+        const current = {};
+        for (const key of CONFIG_KEYS) current[key] = settings[key];
+        return json({ ok: true, config: current });
+      },
+    }),
+  );
 
   ctx.effect(() =>
     ctx.connection.fetch.register({

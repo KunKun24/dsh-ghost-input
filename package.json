@@ -1,6 +1,6 @@
 {
   "name": "dsh-ghost-input",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "输入框行内续写：停顿后由当前会话的模型补全半句话，Tab 收下（DeepSeek Harness 插件）",
   "icon": "icon.png",
   "type": "module",

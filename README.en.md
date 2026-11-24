@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [**English**](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.1.0-blue)
+![version](https://img.shields.io/badge/version-0.2.0-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -48,20 +48,24 @@ Then enable the `ghost-input` row under **Plugins** and refresh the page. The bu
 - the Host half registers `POST /api/ghost-input/complete` and runs one short completion through `ctx.llm` with the session's own model;
 - the browser half watches the composer (a Lexical contenteditable) for pauses, `Tab`, and IME events, then renders the result as grey trailing text.
 
-## Configuration
+## Settings
 
-The plugin row's config lives in `cordis.patch.yml` (or the plugin page). Every key is optional:
+Installing the plugin adds a **Settings** entry to the sidebar: pause delay, longest continuation, output budget, temperature, timeout, key cap label, whether conversation context is used, and the master switch all live there. Edits save as you go and apply to the next pause without a reload; the GitHub card in the top-right corner opens the repository, so you can leave a star if you find it useful.
+
+The host clamps every value it writes and stores them in `<DSH_HOME>/ghost-input/settings.json` (default `~/.dsh/ghost-input/settings.json`), so upgrading the plugin never wipes them.
+
+The plugin row's config in `cordis.patch.yml` (or the plugin page) still works as the initial value. Every key is optional:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `enabled` | `true` | Master switch |
+| `delayMs` | `600` | How long you stop typing before the request (200–1500 ms) |
 | `maxTokens` | `96` | Output cap for one continuation |
 | `temperature` | `0.3` | Sampling temperature; lower is steadier |
 | `timeoutMs` | `4500` | Per-request timeout; failures stay silent |
-| `maxSuffixChars` | `80` | Longest continuation shown, truncated beyond that |
+| `maxSuffixChars` | `80` | Longest continuation shown, clipped to the line |
 | `hintKey` | `Tab` | Text drawn on the key cap after the grey continuation |
-
-The browser-side pause is fixed at 600 ms (edit `DEFAULTS` at the top of `client.js`).
+| `useContext` | `true` | Send the recent conversation tail and workspace name |
 
 ## Cost and privacy
 

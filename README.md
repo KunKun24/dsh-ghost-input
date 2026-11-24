@@ -2,7 +2,7 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.1.0-blue)
+![version](https://img.shields.io/badge/version-0.2.0-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -48,20 +48,24 @@ dsh plugin install ./dsh-ghost-input
 - 宿主侧注册 `POST /api/ghost-input/complete`，通过 `ctx.llm` 用当前会话的模型做一次短补全；
 - 浏览器侧监听输入框（Lexical contenteditable）的停顿、`Tab`、输入法事件，把结果渲染成灰色尾注。
 
-## 配置
+## 参数设置
 
-插件行配置写在 `cordis.patch.yml`（或插件页面），全部可选：
+装好后左侧栏会多出一个 **参数设置** 入口：停顿延迟、最多显示字数、输出上限、采样温度、超时、键帽文字、是否带上下文，以及总开关，都在这里改。改动即时保存，下一次停顿就按新参数工作，不用刷新页面；右上角的 GitHub 卡片点一下就跳到仓库，喜欢的话给个 star。
+
+滑块的范围与写入的值由宿主侧统一夹取，写进 `<DSH_HOME>/ghost-input/settings.json`（默认 `~/.dsh/ghost-input/settings.json`），插件升级不会覆盖。
+
+插件行配置仍写在 `cordis.patch.yml`（或插件页面），作为初始值，全部可选：
 
 | 键 | 默认值 | 说明 |
 | --- | --- | --- |
 | `enabled` | `true` | 总开关 |
+| `delayMs` | `600` | 停顿多久之后才请求模型（200–1500ms） |
 | `maxTokens` | `96` | 单次续写的输出上限 |
 | `temperature` | `0.3` | 采样温度，低一些更稳 |
 | `timeoutMs` | `4500` | 单次请求超时，超时静默失败 |
-| `maxSuffixChars` | `80` | 显示的最长字数，超出截断 |
+| `maxSuffixChars` | `80` | 显示的最长字数，超出按行宽截断 |
 | `hintKey` | `Tab` | 灰字后面键帽上显示的文字 |
-
-浏览器侧的停顿延迟固定为 600ms（编辑 `client.js` 顶部的 `DEFAULTS` 可改）。
+| `useContext` | `true` | 是否带上最近对话与工作区名 |
 
 ## 成本与隐私
 

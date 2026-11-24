@@ -9,7 +9,9 @@
  */
 window.__ModuleLoader__.load({
   id: 'dsh-ghost-input',
-  factory: () => {
+  factory: (require) => {
+    const React = require('react');
+    const h = React.createElement;
     const STYLE_ID = 'dsh-ghost-input-style';
     /** Room kept after the caret for the Tab key cap before the text is clipped. */
     const BADGE_SPACE = 46;
@@ -37,21 +39,357 @@ window.__ModuleLoader__.load({
       '[data-ghost-measure]{position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;pointer-events:none}',
     ].join('');
 
-    const DEFAULTS = { delayMs: 600, maxSuffixChars: 80, hintKey: 'Tab' };
+    const DEFAULTS = {
+      enabled: true,
+      delayMs: 600,
+      maxSuffixChars: 80,
+      hintKey: 'Tab',
+      maxTokens: 96,
+      temperature: 0.3,
+      timeoutMs: 4500,
+      useContext: true,
+    };
+
+
+    const BRAND = 'var(--dsw-alias-brand-primary, #4d6bfe)';
+    const MUTED = 'var(--dsw-alias-text-secondary, #8b93a7)';
+    const LINE = 'var(--dsw-alias-border-secondary, rgba(128,128,128,.22))';
+    const REPO = 'https://github.com/KunKun24/dsh-ghost-input';
+
+    const COPY = {
+      zh: {
+        title: '输入框续写 · 参数设置',
+        lead: '改动即时保存，下一次停顿就按新参数工作，不需要刷新页面。',
+        enabled: ['总开关', '关掉后不再向模型发任何请求'],
+        delay: ['停顿延迟', '停手多久之后才去问模型；太短会打断思路，太长会显得迟钝'],
+        chars: ['最多显示字数', '灰字最长显示多少字，超出的部分按行宽截断'],
+        tokens: ['输出上限', '一次续写的 token 上限，太小会被推理过程吃光'],
+        temp: ['采样温度', '越低越稳、越贴上下文；越高越发散'],
+        timeout: ['超时', '超过这个时间没返回就静默放弃这次续写'],
+        hint: ['键帽文字', '灰字后面那个小键帽上显示的文字'],
+        context: ['带上对话上下文', '关闭后只看当前草稿，省 token 但续写会更泛'],
+        reset: '恢复默认',
+        saved: '已保存',
+        loading: '读取中…',
+        failed: '读取失败，检查插件是否已启用',
+        star: '喜欢的话点个 star 吧',
+      },
+      en: {
+        title: 'Ghost input · Settings',
+        lead: 'Changes are saved as you edit and apply to the next pause; no reload needed.',
+        enabled: ['Enabled', 'Off means no model request at all'],
+        delay: ['Pause delay', 'How long you stop typing before the model is asked'],
+        chars: ['Max characters', 'Longest continuation shown before it is clipped to the line'],
+        tokens: ['Output budget', 'Token ceiling for one continuation'],
+        temp: ['Temperature', 'Lower stays closer to the draft and the conversation'],
+        timeout: ['Timeout', 'Give up silently after this long'],
+        hint: ['Key cap label', 'Text on the small key cap after the grey text'],
+        context: ['Use conversation context', 'Off: only the draft, cheaper but blander'],
+        reset: 'Reset defaults',
+        saved: 'Saved',
+        loading: 'Loading…',
+        failed: 'Could not read settings — is the plugin enabled?',
+        star: 'Star it if you find it useful',
+      },
+    };
+
+    const copy = () => (typeof navigator !== 'undefined' && /^zh/i.test(navigator.language || '') ? COPY.zh : COPY.en);
+
+    function SlidersIcon({ size = 16 }) {
+      return h('svg', {
+        width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+      },
+        h('line', { key: 'a', x1: 4, y1: 7, x2: 20, y2: 7 }),
+        h('circle', { key: 'b', cx: 9, cy: 7, r: 2.4, fill: 'currentColor', stroke: 'none' }),
+        h('line', { key: 'c', x1: 4, y1: 17, x2: 20, y2: 17 }),
+        h('circle', { key: 'd', cx: 15, cy: 17, r: 2.4, fill: 'currentColor', stroke: 'none' })
+      );
+    }
+
+    function GithubMark({ size = 18 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true' },
+        h('path', {
+          d: 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z',
+        })
+      );
+    }
+
+    function Switch({ checked, onChange }) {
+      return h('button', {
+        type: 'button', role: 'switch', 'aria-checked': checked,
+        onClick: () => onChange(!checked),
+        style: {
+          width: 44, height: 24, borderRadius: 12, border: 0, padding: 0, flex: 'none',
+          position: 'relative', cursor: 'pointer',
+          background: checked ? BRAND : 'rgba(128,128,128,.35)',
+          transition: 'background .18s',
+        },
+      }, h('span', {
+        style: {
+          position: 'absolute', top: 3, left: checked ? 23 : 3,
+          width: 18, height: 18, borderRadius: '50%', background: '#fff',
+          transition: 'left .18s', boxShadow: '0 1px 2px rgba(0,0,0,.28)',
+        },
+      }));
+    }
+
+    function Row({ title, hint, children }) {
+      return h('div', {
+        style: {
+          display: 'flex', alignItems: 'center', gap: 20,
+          padding: '14px 0', borderBottom: '1px solid ' + LINE,
+        },
+      },
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontSize: 13.5, fontWeight: 500 } }, title),
+          hint ? h('div', { style: { fontSize: 12, color: MUTED, marginTop: 3, lineHeight: 1.55 } }, hint) : null
+        ),
+        h('div', { style: { flex: 'none', minWidth: 150, display: 'flex', justifyContent: 'flex-end' } }, children)
+      );
+    }
+
+    function Range({ value, min, max, step, onChange, label }) {
+      return h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+        h('input', {
+          type: 'range', min, max, step, value,
+          onChange: (event) => onChange(Number(event.target.value)),
+          style: { width: 110, accentColor: BRAND },
+        }),
+        h('span', { style: { fontSize: 12.5, color: MUTED, minWidth: 52, textAlign: 'right' } }, label)
+      );
+    }
+
+    function NumberBox({ value, min, max, onChange }) {
+      return h('input', {
+        type: 'number', min, max, value,
+        onChange: (event) => onChange(Number(event.target.value)),
+        style: {
+          width: 92, padding: '5px 8px', fontSize: 13, textAlign: 'right',
+          border: '1px solid ' + LINE, borderRadius: 8, background: 'transparent',
+          color: 'inherit', outline: 'none',
+        },
+      });
+    }
+
+    function TextBox({ value, onChange }) {
+      return h('input', {
+        type: 'text', value, maxLength: 8,
+        onChange: (event) => onChange(event.target.value),
+        style: {
+          width: 92, padding: '5px 8px', fontSize: 13, textAlign: 'center',
+          border: '1px solid ' + LINE, borderRadius: 8, background: 'transparent',
+          color: 'inherit', outline: 'none',
+        },
+      });
+    }
+
+    function RepoCard() {
+      const t = copy();
+      return h('a', {
+        href: REPO, target: '_blank', rel: 'noopener noreferrer',
+        style: {
+          display: 'inline-flex', alignItems: 'center', gap: 8, flex: 'none',
+          padding: '6px 12px 6px 10px', borderRadius: 999,
+          border: '1px solid ' + LINE, color: MUTED,
+          fontSize: 12.5, textDecoration: 'none', whiteSpace: 'nowrap',
+          transition: 'color .15s, border-color .15s',
+        },
+        onMouseEnter: (event) => {
+          event.currentTarget.style.color = 'var(--dsw-alias-text-primary, inherit)';
+          event.currentTarget.style.borderColor = BRAND;
+        },
+        onMouseLeave: (event) => {
+          event.currentTarget.style.color = MUTED;
+          event.currentTarget.style.borderColor = LINE;
+        },
+      },
+        h(GithubMark, null),
+        h('span', null, `${t.star} ›`)
+      );
+    }
+
+    function SettingsPanel() {
+      const t = copy();
+      const [config, setConfig] = React.useState(null);
+      const [status, setStatus] = React.useState(t.loading);
+      const timer = React.useRef(null);
+
+      React.useEffect(() => {
+        let alive = true;
+        fetch('/api/ghost-input/config', { credentials: 'same-origin' })
+          .then((response) => response.json())
+          .then((data) => {
+            if (!alive) return;
+            if (data && data.ok) {
+              setConfig(data.config);
+              setStatus('');
+            } else {
+              setStatus(t.failed);
+            }
+          })
+          .catch(() => alive && setStatus(t.failed));
+        return () => {
+          alive = false;
+          if (timer.current !== null) clearTimeout(timer.current);
+        };
+      }, []);
+
+      const save = (patch) => {
+        const next = { ...config, ...patch };
+        setConfig(next);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('dsh-ghost-input:config', { detail: next }));
+        }
+        if (timer.current !== null) clearTimeout(timer.current);
+        timer.current = setTimeout(async () => {
+          try {
+            const response = await fetch('/api/ghost-input/config', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(next),
+            });
+            const data = await response.json();
+            if (data && data.ok) {
+              setStatus(t.saved);
+              setTimeout(() => setStatus(''), 1600);
+            } else {
+              setStatus('保存失败');
+            }
+          } catch {
+            setStatus('保存失败');
+          }
+        }, 400);
+      };
+
+      const header = h('div', {
+        style: { display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 4 },
+      },
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontSize: 18, fontWeight: 600 } }, t.title),
+          h('div', { style: { fontSize: 12.5, color: MUTED, marginTop: 6, lineHeight: 1.6 } }, t.lead)
+        ),
+        h(RepoCard, null)
+      );
+
+      const body = config
+        ? h('div', null,
+            h(Row, { title: t.enabled[0], hint: t.enabled[1] },
+              h(Switch, { checked: !!config.enabled, onChange: (value) => save({ enabled: value }) })
+            ),
+            h(Row, { title: t.delay[0], hint: t.delay[1] },
+              h(Range, {
+                value: config.delayMs, min: 200, max: 1500, step: 50,
+                label: `${config.delayMs} ms`,
+                onChange: (value) => save({ delayMs: value }),
+              })
+            ),
+            h(Row, { title: t.chars[0], hint: t.chars[1] },
+              h(Range, {
+                value: config.maxSuffixChars, min: 20, max: 200, step: 10,
+                label: `${config.maxSuffixChars}`,
+                onChange: (value) => save({ maxSuffixChars: value }),
+              })
+            ),
+            h(Row, { title: t.tokens[0], hint: t.tokens[1] },
+              h(NumberBox, {
+                value: config.maxTokens, min: 16, max: 512,
+                onChange: (value) => save({ maxTokens: value }),
+              })
+            ),
+            h(Row, { title: t.temp[0], hint: t.temp[1] },
+              h(Range, {
+                value: config.temperature, min: 0, max: 1, step: 0.05,
+                label: Number(config.temperature).toFixed(2),
+                onChange: (value) => save({ temperature: value }),
+              })
+            ),
+            h(Row, { title: t.timeout[0], hint: t.timeout[1] },
+              h(NumberBox, {
+                value: config.timeoutMs, min: 500, max: 10000,
+                onChange: (value) => save({ timeoutMs: value }),
+              })
+            ),
+            h(Row, { title: t.hint[0], hint: t.hint[1] },
+              h(TextBox, { value: config.hintKey, onChange: (value) => save({ hintKey: value }) })
+            ),
+            h(Row, { title: t.context[0], hint: t.context[1] },
+              h(Switch, { checked: !!config.useContext, onChange: (value) => save({ useContext: value }) })
+            ),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, marginTop: 18 } },
+              h('button', {
+                type: 'button',
+                onClick: () => save({
+                  enabled: true, delayMs: 600, maxSuffixChars: 80,
+                  maxTokens: 96, temperature: 0.3, timeoutMs: 4500,
+                  hintKey: 'Tab', useContext: true,
+                }),
+                style: {
+                  padding: '7px 14px', fontSize: 12.5, borderRadius: 8,
+                  border: '1px solid ' + LINE, background: 'transparent',
+                  color: 'inherit', cursor: 'pointer',
+                },
+              }, t.reset),
+              h('span', { style: { fontSize: 12, color: MUTED } }, status)
+            )
+          )
+        : h('div', { style: { padding: '40px 0', fontSize: 13, color: MUTED } }, status || t.loading);
+
+      return h('div', {
+        style: {
+          maxWidth: 760, margin: '0 auto', padding: '38px 28px 60px',
+          fontSize: 13.5, lineHeight: 1.6,
+        },
+      }, header, body);
+    }
+
+    function registerSlots(ctx) {
+      try {
+        if (!ctx || !ctx.slots) return;
+        ctx.slots.inject('sidebar.panellist', () =>
+          ctx.slots.register({
+            name: 'sidebar.panellist',
+            id: 'ghost-input',
+            order: 35,
+            label: () => (copy() === COPY.zh ? '参数设置' : 'Ghost settings'),
+          }, SlidersIcon)
+        );
+        ctx.slots.inject('main', () =>
+          ctx.slots.register({ name: 'main', key: 'ghost-input' }, SettingsPanel)
+        );
+      } catch {
+        /* a host without the sidebar slots still gets the composer behaviour */
+      }
+    }
 
     function apply(ctx) {
+      registerSlots(ctx);
       if (typeof document === 'undefined' || typeof window === 'undefined') return;
       try {
 
-      let overrides = {};
+      /** Live settings: patch config, then whatever the settings panel saved on the host. */
+      const config = { ...DEFAULTS };
       try {
-        const config = ctx?.config;
-        if (config !== null && typeof config === 'object') overrides = config;
+        const own = ctx?.config;
+        if (own !== null && typeof own === 'object') Object.assign(config, own);
       } catch {
         /* config is only readable when injected; defaults are fine */
       }
-      const options = { ...DEFAULTS, ...overrides };
-      const delay = Number.isFinite(options.delayMs) ? Math.max(120, options.delayMs) : DEFAULTS.delayMs;
+      const adoptConfig = (raw) => {
+        if (!raw || typeof raw !== 'object') return;
+        for (const key of Object.keys(DEFAULTS)) {
+          if (raw[key] !== undefined) config[key] = raw[key];
+        }
+        if (typeof badge?.textContent === 'string') syncBadge();
+      };
+
+      fetch('/api/ghost-input/config', { credentials: 'same-origin' })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data && data.ok) adoptConfig(data.config);
+        })
+        .catch(() => {});
 
       const state = {
         ghost: '',
@@ -71,7 +409,10 @@ window.__ModuleLoader__.load({
 
       const badge = document.createElement('span');
       badge.setAttribute('data-ghost-tab', '');
-      badge.textContent = typeof options.hintKey === 'string' && options.hintKey ? options.hintKey : 'Tab';
+      const syncBadge = () => {
+        badge.textContent = typeof config.hintKey === 'string' && config.hintKey ? config.hintKey : 'Tab';
+      };
+      syncBadge();
       badge.hidden = true;
       document.body.append(badge);
 
@@ -104,7 +445,7 @@ window.__ModuleLoader__.load({
 
       /** Clip the continuation so it and the key cap stay on the caret's line. */
       const fitToLine = (paragraph, text) => {
-        const maxChars = Number.isFinite(options.maxSuffixChars) ? options.maxSuffixChars : DEFAULTS.maxSuffixChars;
+        const maxChars = Number.isFinite(config.maxSuffixChars) ? config.maxSuffixChars : DEFAULTS.maxSuffixChars;
         let candidate = text.length > maxChars ? `${text.slice(0, maxChars)}…` : text;
         const rect = caretRect();
         if (!rect) return candidate;
@@ -250,7 +591,7 @@ window.__ModuleLoader__.load({
       };
 
       const request = async () => {
-        if (!state.enabled || state.composing) return;
+        if (!config.enabled || state.composing) return;
         const composer = activeComposer();
         if (!composer) return;
         if (composer.hasAttribute('data-composer-composing')) return;
@@ -291,12 +632,12 @@ window.__ModuleLoader__.load({
       };
 
       const schedule = () => {
-        if (!state.enabled || state.composing) return;
+        if (!config.enabled || state.composing) return;
         if (state.timer !== null) clearTimeout(state.timer);
         state.timer = setTimeout(() => {
           state.timer = null;
           void request();
-        }, delay);
+        }, Math.max(200, Number(config.delayMs) || DEFAULTS.delayMs));
       };
 
       const onKeyDown = (event) => {
@@ -358,6 +699,7 @@ window.__ModuleLoader__.load({
       };
 
       const onViewport = () => positionBadge();
+      const onConfigEvent = (event) => adoptConfig(event?.detail);
 
       window.addEventListener('keydown', onKeyDown, true);
       document.addEventListener('input', onInput, true);
@@ -367,6 +709,7 @@ window.__ModuleLoader__.load({
       document.addEventListener('focusout', onFocusOut, true);
       window.addEventListener('resize', onViewport);
       window.addEventListener('scroll', onViewport, true);
+      window.addEventListener('dsh-ghost-input:config', onConfigEvent);
 
       const dispose = () => {
         window.removeEventListener('keydown', onKeyDown, true);
@@ -377,6 +720,7 @@ window.__ModuleLoader__.load({
         document.removeEventListener('focusout', onFocusOut, true);
         window.removeEventListener('resize', onViewport);
         window.removeEventListener('scroll', onViewport, true);
+        window.removeEventListener('dsh-ghost-input:config', onConfigEvent);
         if (selectionTimer !== null) clearTimeout(selectionTimer);
         cancelPending();
         clearGhost();
@@ -392,6 +736,6 @@ window.__ModuleLoader__.load({
       }
     }
 
-    return { apply };
+    return { apply, inject: ['slots'] };
   },
 });
