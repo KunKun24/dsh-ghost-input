@@ -9,6 +9,8 @@
 
 输入框行内续写（ghost text）——打字停下，模型在光标后补出后半句，灰色显示，`Tab` 收下。
 
+![效果：灰字续写 + Tab 键帽](docs/screenshot.png)
+
 > 这是 DeepSeek Harness（DSH）的插件。没有 DSH 的话，它没地方运行。
 
 ## 它做什么

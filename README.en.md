@@ -9,6 +9,8 @@
 
 Inline continuation (ghost text) for the DeepSeek Harness composer — stop typing, and the model writes the rest of the sentence in grey right after the caret. Press `Tab` to keep it.
 
+![Ghost text with the Tab key cap](docs/screenshot.png)
+
 > A plugin for DeepSeek Harness (DSH). Without DSH there is nothing for it to run in.
 
 ## What it does
