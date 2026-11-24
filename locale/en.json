@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Ghost input",
+    "description": "Inline continuation in the composer: pause after typing and the session's own model writes the rest of the sentence in grey; press Tab to accept, Escape or any further typing to dismiss. Each pause costs one short model request, cached for 45 seconds and skipped during IME composition."
+  }
+}

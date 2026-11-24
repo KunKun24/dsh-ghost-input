@@ -1,0 +1,9 @@
+- insert:
+    - id: ghost-input
+      name: 'dsh-ghost-input'
+      config:
+        enabled: true
+        maxTokens: 48
+        temperature: 0.3
+        timeoutMs: 4500
+        maxSuffixChars: 80
