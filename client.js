@@ -15,6 +15,11 @@ window.__ModuleLoader__.load({
     const STYLE_ID = 'dsh-ghost-input-style';
     /** Room kept after the caret for the Tab key cap before the text is clipped. */
     const BADGE_SPACE = 46;
+    const TOUCH_HINT = '轻点';
+
+    /** True on phones/tablets, where no physical Tab key exists. */
+    const isCoarsePointer = () => typeof window.matchMedia === 'function'
+      && window.matchMedia('(pointer: coarse)').matches;
     const CSS = [
       '[data-composer-input] p[data-ghost-suffix]::after{',
       'content:attr(data-ghost-suffix) !important;',
@@ -37,6 +42,25 @@ window.__ModuleLoader__.load({
       '}',
       '[data-ghost-tab][hidden]{display:none}',
       '[data-ghost-measure]{position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;pointer-events:none}',
+      '[data-ghost-tap]{',
+      'position:fixed;margin:0;padding:0;border:0;background:transparent;',
+      'cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;',
+      'z-index:2147483001;',
+      '}',
+      '[data-ghost-tap][hidden]{display:none}',
+      '[data-ghost-pill]{',
+      'position:fixed;display:inline-flex;align-items:center;justify-content:center;gap:5px;',
+      'height:34px;padding:0 12px;margin:0;',
+      'border:1px solid color-mix(in srgb, var(--dsw-alias-label-tertiary,#8b93a7) 30%, transparent);',
+      'border-radius:999px;',
+      'background:color-mix(in srgb, var(--dsw-alias-bg-base,#fff) 92%, transparent);',
+      'color:color-mix(in srgb, var(--dsw-alias-label-primary,#1a2332) 78%, transparent);',
+      'font-family:inherit;font-size:12px;font-weight:500;line-height:1;',
+      'box-shadow:0 2px 10px rgba(0,0,0,.10);',
+      'cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;',
+      'z-index:2147483002;',
+      '}',
+      '[data-ghost-pill][hidden]{display:none}',
     ].join('');
 
     const DEFAULTS = {
@@ -410,11 +434,29 @@ window.__ModuleLoader__.load({
       const badge = document.createElement('span');
       badge.setAttribute('data-ghost-tab', '');
       const syncBadge = () => {
-        badge.textContent = typeof config.hintKey === 'string' && config.hintKey ? config.hintKey : 'Tab';
+        const configured = typeof config.hintKey === 'string' && config.hintKey ? config.hintKey : 'Tab';
+        badge.textContent = configured === 'Tab' && isCoarsePointer() ? TOUCH_HINT : configured;
       };
       syncBadge();
       badge.hidden = true;
       document.body.append(badge);
+
+      const tap = document.createElement('button');
+      tap.setAttribute('data-ghost-tap', '');
+      tap.type = 'button';
+      tap.tabIndex = -1;
+      tap.setAttribute('aria-label', '收下这段续写');
+      tap.hidden = true;
+      document.body.append(tap);
+
+      const pill = document.createElement('button');
+      pill.setAttribute('data-ghost-pill', '');
+      pill.type = 'button';
+      pill.tabIndex = -1;
+      pill.setAttribute('aria-label', '收下续写，长按丢弃');
+      pill.hidden = true;
+      pill.innerHTML = '<span aria-hidden="true" style="font-size:13px;line-height:1">⇥</span><span>补全</span>';
+      document.body.append(pill);
 
       const measureEl = document.createElement('span');
       measureEl.setAttribute('data-ghost-measure', '');
@@ -468,21 +510,52 @@ window.__ModuleLoader__.load({
         return best;
       };
 
+      const hideTouchTargets = () => {
+        tap.hidden = true;
+        pill.hidden = true;
+        tap.style.width = '0px';
+      };
+
       const positionBadge = () => {
         if (!state.ghost || !state.anchor) {
           badge.hidden = true;
+          hideTouchTargets();
           return;
         }
         const paragraph = state.anchor.querySelector('p:last-child');
         const rect = caretRect();
         if (!paragraph || !rect) {
           badge.hidden = true;
+          hideTouchTargets();
           return;
         }
         const width = measure(paragraph, state.shown);
         badge.hidden = false;
         badge.style.left = `${Math.round(rect.left + width + 6)}px`;
         badge.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
+
+        // Phones have no Tab key: the faded continuation and its key cap become
+        // one tap target, with a floating chip as the fallback when that target
+        // is too small to hit comfortably.
+        if (!isCoarsePointer()) {
+          hideTouchTargets();
+          return;
+        }
+        const badgeWidth = badge.getBoundingClientRect().width || 30;
+        const tapWidth = Math.max(44, Math.round(width + badgeWidth + 16));
+        tap.hidden = false;
+        tap.style.left = `${Math.round(rect.left - 4)}px`;
+        tap.style.top = `${Math.round(rect.top - 6)}px`;
+        tap.style.width = `${tapWidth}px`;
+        tap.style.height = `${Math.round(rect.height + 12)}px`;
+        pill.hidden = false;
+
+        const card = state.anchor.closest('[data-composer-card]') || state.anchor;
+        const cardRect = card.getBoundingClientRect();
+        const pillWidth = pill.getBoundingClientRect().width || 74;
+        const right = Math.max(12, Math.min(window.innerWidth - cardRect.right + 8, window.innerWidth - pillWidth - 12));
+        pill.style.right = `${Math.round(right)}px`;
+        pill.style.top = `${Math.round(Math.max(8, cardRect.top - 44))}px`;
       };
 
       const composerOf = (node) => {
@@ -524,6 +597,7 @@ window.__ModuleLoader__.load({
         state.shown = '';
         state.anchor = null;
         badge.hidden = true;
+        hideTouchTargets();
         for (const paragraph of document.querySelectorAll('[data-composer-input] p[data-ghost-suffix]')) {
           paragraph.removeAttribute('data-ghost-suffix');
         }
@@ -553,8 +627,8 @@ window.__ModuleLoader__.load({
         positionBadge();
       };
 
-      const insertText = (text) => {
-        const composer = state.anchor ?? activeComposer();
+      const insertText = (text, target) => {
+        const composer = target ?? state.anchor ?? activeComposer();
         let inserted = false;
         try {
           inserted = document.execCommand('insertText', false, text);
@@ -581,8 +655,14 @@ window.__ModuleLoader__.load({
       const acceptGhost = () => {
         if (!state.ghost) return;
         const text = state.ghost;
+        const target = state.anchor ?? activeComposer();
         clearGhost();
-        insertText(text);
+        insertText(text, target);
+        try {
+          target?.focus({ preventScroll: true });
+        } catch {
+          target?.focus?.();
+        }
       };
 
       const currentSessionId = () => {
@@ -693,13 +773,64 @@ window.__ModuleLoader__.load({
         const composer = composerOf(event.target);
         if (!composer) return;
         const next = event.relatedTarget;
-        if (next && composer.contains(next)) return;
+        if (next && (composer.contains(next) || next === tap || next === pill)) return;
         clearGhost();
         cancelPending();
       };
 
       const onViewport = () => positionBadge();
       const onConfigEvent = (event) => adoptConfig(event?.detail);
+
+      // Touch: tap the faded continuation (or its key cap) to accept it; the
+      // floating chip accepts on tap and discards on a long press.
+      let pillTimer = null;
+      const stopPillTimer = () => {
+        if (pillTimer !== null) {
+          clearTimeout(pillTimer);
+          pillTimer = null;
+        }
+      };
+
+      const onTapPointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      };
+
+      const onTapPointerUp = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        acceptGhost();
+        schedule();
+      };
+
+      const onPillPointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        stopPillTimer();
+        pillTimer = setTimeout(() => {
+          pillTimer = null;
+          clearGhost();
+          cancelPending();
+        }, 480);
+      };
+
+      const onPillPointerUp = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (pillTimer !== null) {
+          stopPillTimer();
+          acceptGhost();
+          schedule();
+        }
+      };
+
+      const onPillPointerCancel = () => stopPillTimer();
+
+      tap.addEventListener('pointerdown', onTapPointerDown);
+      tap.addEventListener('pointerup', onTapPointerUp);
+      pill.addEventListener('pointerdown', onPillPointerDown);
+      pill.addEventListener('pointerup', onPillPointerUp);
+      pill.addEventListener('pointercancel', onPillPointerCancel);
 
       window.addEventListener('keydown', onKeyDown, true);
       document.addEventListener('input', onInput, true);
@@ -722,8 +853,16 @@ window.__ModuleLoader__.load({
         window.removeEventListener('scroll', onViewport, true);
         window.removeEventListener('dsh-ghost-input:config', onConfigEvent);
         if (selectionTimer !== null) clearTimeout(selectionTimer);
+        stopPillTimer();
+        tap.removeEventListener('pointerdown', onTapPointerDown);
+        tap.removeEventListener('pointerup', onTapPointerUp);
+        pill.removeEventListener('pointerdown', onPillPointerDown);
+        pill.removeEventListener('pointerup', onPillPointerUp);
+        pill.removeEventListener('pointercancel', onPillPointerCancel);
         cancelPending();
         clearGhost();
+        tap.remove();
+        pill.remove();
         badge.remove();
         measureEl.remove();
         style.remove();

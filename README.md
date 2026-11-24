@@ -2,7 +2,7 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.0-blue)
+![version](https://img.shields.io/badge/version-0.2.1-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -23,6 +23,12 @@
 - 只在光标位于草稿末尾、且没有选中文本时才出现
 - 输入法拼写过程中不触发，避免和候选词打架
 - 以 `/` 或 `@` 开头时跳过（那是命令和引用的地盘）
+
+**手机上**没有 `Tab` 键，插件会自动换成触摸方式：
+
+- 键帽文字变成「轻点」，直接**点那段灰字**（连同键帽）就能收下，键盘不会收起
+- 输入框上方会浮出一个 `⇥ 补全` 小按钮：点一下收下，**长按**丢弃
+- 其它行为不变：继续打字、移动光标、切会话都会丢弃续写
 
 续写会参考最近的对话与当前草稿，尽量接住正在聊的话题和措辞；是否值得出现由模型判断：草稿太短、上下文不足、没把握，模型就回空字符串，插件保持安静。
 
@@ -78,13 +84,14 @@ dsh plugin install ./dsh-ghost-input
 - 输入框是宿主自绘的 Lexical `contenteditable`，插件用 DOM 事件与其交互（官方未开放 composer 的编辑接口给插件）。DSH 大改输入框结构时可能需要同步适配。
 - 灰色续写用输入框最后一段的 `::after` 渲染在光标之后；当官方命令提示（hint）正在显示、或输入法正在拼写时，插件会让位。
 - 极短草稿（一两个字）也允许请求，是否续写由模型决定——代价是一次很短的调用。
+- 手机上灰字出现期间，点灰字那一小条区域是「收下」，不是把光标移过去；想移动光标点别处即可。
 
 ## AI 使用说明
 
 本插件的代码与文档在 **AIGC（AI 生成内容）辅助**下完成，并已通过开发者的人工审阅：
 
 - 每一行代码都经过人工阅读与修改，不是直接粘贴的生成结果
-- 功能在真实 DSH 实例 + 无头浏览器中逐项验证：灰字出现、`Tab` 收下、`Esc` 丢弃、输入法期间不触发、45 秒缓存
+- 功能在真实 DSH 实例 + 无头浏览器中逐项验证：灰字出现、`Tab` 收下、`Esc` 丢弃、输入法期间不触发、45 秒缓存、手机端点击灰字与长按药丸
 - 发布前人工核对了宿主侧路由的鉴权方式、模型调用的成本边界与数据去向
 
 人工审阅不等于零缺陷。使用中若发现与本文描述不符的行为，欢迎在 [Issues](https://github.com/KunKun24/dsh-ghost-input/issues) 反馈。

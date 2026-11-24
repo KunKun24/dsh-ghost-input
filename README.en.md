@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [**English**](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.0-blue)
+![version](https://img.shields.io/badge/version-0.2.1-blue)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 ![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
@@ -23,6 +23,12 @@ Type half a sentence in the composer and pause (about 0.6 s). The plugin asks th
 - Shown only when the caret sits at the end of the draft and nothing is selected
 - Never fires while an IME composition is open, so it does not fight candidate words
 - Skipped when the draft starts with `/` or `@` (commands and references own those)
+
+**On phones** there is no `Tab` key, so the plugin switches to touch:
+
+- The key cap reads “轻点” (tap) — tap the faded continuation itself (or the cap) to accept it, the keyboard stays open
+- A small `⇥ 补全` chip floats above the composer: tap to accept, **long press** to discard
+- Everything else is unchanged: typing on, moving the caret or switching sessions discards the suggestion
 
 The continuation is grounded in the recent conversation and the draft itself, so it picks up the topic and wording already in play. Whether it is worth showing is the model's decision: a draft that is too short, a context that is too thin, or a low-confidence case returns an empty string and the plugin stays quiet.
 
@@ -78,13 +84,14 @@ The plugin row's config in `cordis.patch.yml` (or the plugin page) still works a
 - The composer is a host-owned Lexical `contenteditable`, and DSH does not expose its editing API to plugins, so this plugin drives it through DOM events. A large composer rewrite may need a matching update here.
 - The grey continuation is drawn by the last paragraph's `::after`, right after the caret; the plugin yields while an official command hint or an IME composition is showing.
 - Very short drafts (one or two characters) still request a completion; whether to continue is the model's call, at the cost of one tiny request.
+- On phones, while a suggestion is showing, tapping that thin strip accepts it instead of moving the caret; tap elsewhere to move the caret.
 
 ## AI disclosure
 
 This plugin's code and documentation were written with **AIGC (AI-generated content) assistance** and have been reviewed by a human:
 
 - Every line was read and edited by hand; nothing was pasted in raw
-- Behaviour was verified item by item on a live DSH instance in a headless browser: the ghost text appears, `Tab` accepts, `Esc` discards, IME composition suppresses it, and results are cached for 45 seconds
+- Behaviour was verified item by item on a live DSH instance in a headless browser: the ghost text appears, `Tab` accepts, `Esc` discards, IME composition suppresses it, results are cached for 45 seconds, and the tap / long-press paths work on phones
 - Before release, the host route's authentication, the model call's cost boundary and where the data goes were checked manually
 
 Human review is not a zero-defect guarantee. If reality disagrees with this document, please open an [issue](https://github.com/KunKun24/dsh-ghost-input/issues).
