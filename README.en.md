@@ -1,102 +1,93 @@
-# dsh-ghost-input
+# dsh-ghost-input · Inline ghost-text continuation
 
-[简体中文](README.md) · [**English**](README.en.md)
+[**简体中文**](README.md) · [English](README.en.md)
 
 ![version](https://img.shields.io/badge/version-0.2.3-blue)
-![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
-![human review](https://img.shields.io/badge/human%20review-completed-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
+![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 
-Inline continuation (ghost text) for the DeepSeek Harness composer — stop typing, and the model writes the rest of the sentence in grey right after the caret. Press `Tab` to keep it.
+Stop typing for a moment and the model finishes your sentence in grey — press `Tab` to keep it.
 
-![Ghost text with the Tab key cap](docs/screenshot.png)
+![Grey continuation with a Tab key cap; Tab turns it into real text](assets/demo.gif)
 
-> A plugin for DeepSeek Harness (DSH). Without DSH there is nothing for it to run in.
+> A DeepSeek Harness (DSH) plugin for DSH 0.2.0 or newer.
 
 ## What it does
 
-Type half a sentence in the composer and pause (about 0.6 s). The plugin asks the model currently selected for that session for a continuation and shows it as light grey text after the caret:
+Write half a sentence in the composer, pause for about 0.6 s, and the plugin continues it in light grey using the model already selected for the session. Accept with `Tab`, or just keep typing to discard.
 
-- A small `Tab` key cap floats right after the grey text, so the shortcut is discoverable; the cap stays faint and never steals focus
-- `Tab` — accept the continuation; the caret moves to its end
-- `Esc`, keep typing, move the caret, switch session — discard immediately
-- Shown only when the caret sits at the end of the draft and nothing is selected
-- Never fires while an IME composition is open, so it does not fight candidate words
-- Skipped when the draft starts with `/` or `@` (commands and references own those)
+It continues **your sentence**, not the next thing you should ask, and it reads the last few turns plus the workspace name to stay in your vocabulary.
 
-**On phones** there is no `Tab` key: switch **Accept with** to *Phone (tap)* in Settings (or pick *Auto* to follow the device — the default is desktop `Tab`), and the plugin uses touch instead:
+## Features
 
-- The key cap reads “轻点” (tap) — tap the faded continuation itself (or the cap) to accept it, the keyboard stays open
-- A small `⇥ 补全` chip floats above the composer: tap to accept, **long press** to discard
-- Everything else is unchanged: typing on, moving the caret or switching sessions discards the suggestion
+- **Inline continuation** at the caret, up to ~80 characters, truncated to the line width
+- **Subtle hint**: a small `Tab` key cap after the ghost text (the label is configurable)
+- **Accept / dismiss**: `Tab` accepts and moves the caret to the end; `Esc`, typing, moving the caret or switching sessions discards
+- **Only when it makes sense**: caret at the end, no selection, no IME composition; skipped when the draft starts with `/` or `@`
+- **Works on phones**: switch accept mode to "phone (tap)" — tap the grey text, or use the `⇥ 补全` chip (tap accepts, long-press dismisses)
+- **Can be turned off**: one switch in settings stops every request
+- **Cached**: the same draft reuses its result for 45 seconds
 
-The continuation is grounded in the recent conversation and the draft itself, so it picks up the topic and wording already in play. Whether it is worth showing is the model's decision: a draft that is too short, a context that is too thin, or a low-confidence case returns an empty string and the plugin stays quiet.
+## Installation
 
-## Install
-
-### From GitHub (recommended)
+**Option 1 — release tarball (recommended)**
 
 ```bash
-dsh plugin install https://github.com/KunKun24/dsh-ghost-input
+dsh plugin --profile web add https://github.com/KunKun24/dsh-ghost-input/releases/download/v0.2.3/dsh-ghost-input-0.2.3.tgz
 ```
 
-Or open **Plugins** → **Add plugin** in the DSH web UI and paste the repository URL.
-
-### From a checkout
+**Option 2 — local source**
 
 ```bash
-git clone https://github.com/KunKun24/dsh-ghost-input.git
-dsh plugin install ./dsh-ghost-input
+dsh plugin --profile web add link:/path/to/dsh-ghost-input
 ```
 
-Then enable the `ghost-input` row under **Plugins** and refresh the page. The bundle carries both halves:
+**Option 3 — plugin marketplace**
 
-- the Host half registers `POST /api/ghost-input/complete` and runs one short completion through `ctx.llm` with the session's own model;
-- the browser half watches the composer (a Lexical contenteditable) for pauses, `Tab`, and IME events, then renders the result as grey trailing text.
+Submitted ([PR #18779](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18779)); once merged, search `dsh-ghost-input` in the marketplace.
 
-## Settings
+Reload the page afterwards.
 
-Installing the plugin adds a **Settings** entry to the sidebar: pause delay, longest continuation, output budget, temperature, timeout, key cap label, how a suggestion is accepted (desktop Tab / phone tap / auto), whether conversation context is used, and the master switch all live there. The panel scrolls on its own, so short windows and phones can reach every setting; edits save as you go and apply to the next pause without a reload; the GitHub card in the top-right corner opens the repository, so you can leave a star if you find it useful.
+## Usage
 
-The host clamps every value it writes and stores them in `<DSH_HOME>/ghost-input/settings.json` (default `~/.dsh/ghost-input/settings.json`), so upgrading the plugin never wipes them.
+1. Type half a sentence and pause
+2. Wait for the grey text (about 0.6 s plus the model's first token)
+3. Press `Tab` to accept, or keep typing / press `Esc`
 
-The plugin row's config in `cordis.patch.yml` (or the plugin page) still works as the initial value. Every key is optional:
+## Configuration
 
-| Key | Default | Meaning |
+Sidebar → "More → 参数设置" (settings). Changes apply immediately and persist to `~/.dsh/ghost-input/settings.json`.
+
+| Option | Default | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | Master switch |
-| `delayMs` | `600` | How long you stop typing before the request (200–1500 ms) |
-| `maxTokens` | `96` | Output cap for one continuation |
-| `temperature` | `0.3` | Sampling temperature; lower is steadier |
-| `timeoutMs` | `4500` | Per-request timeout; failures stay silent |
-| `maxSuffixChars` | `80` | Longest continuation shown, clipped to the line |
-| `hintKey` | `Tab` | Text drawn on the key cap after the grey continuation |
-| `acceptMode` | `keyboard` | How to accept: `keyboard` = `Tab` only; `touch` = tap the grey text or the chip; `auto` = follow the device |
-| `useContext` | `true` | Send the recent conversation tail and workspace name |
+| Enabled | on | Off stops every model request |
+| Pause delay | 600 ms | Idle time before asking (200–1500) |
+| Max shown characters | 80 | Longest visible continuation (20–200) |
+| Output cap | 96 tokens | Per-completion limit (16–512) |
+| Temperature | 0.30 | Lower is steadier (0–1) |
+| Timeout | 4500 ms | Give up silently after this (500–10000) |
+| Key cap label | `Tab` | Text shown on the tiny key cap |
+| Accept mode | Desktop (Tab) | Desktop / phone (tap) / auto |
+| Use conversation context | on | Off sends only the draft: cheaper, blunter |
 
-## Cost and privacy
+## Limits
 
-- One model request per **pause**, not per keystroke; only one request stays in flight, and a new keystroke aborts it.
-- A continuation for the same draft is cached for 45 seconds, so repeated pauses cost nothing.
-- The request contains a short tail of the conversation plus the current draft. Both already go to the model provider you are using; the plugin sends them nowhere else and stores nothing.
+- Every pause sends a very short model request (cached 45 s); rapid typing in a long session adds up
+- Only one line is shown, so long continuations are clipped on screen but accepted in full
+- On phones, the grey strip accepts instead of moving the caret
+- Depends on the composer's DOM; a major DSH redesign may need an update
 
-## Known limitations
+## Data & privacy
 
-- The composer is a host-owned Lexical `contenteditable`, and DSH does not expose its editing API to plugins, so this plugin drives it through DOM events. A large composer rewrite may need a matching update here.
-- The grey continuation is drawn by the last paragraph's `::after`, right after the caret; the plugin yields while an official command hint or an IME composition is showing.
-- Very short drafts (one or two characters) still request a completion; whether to continue is the model's call, at the cost of one tiny request.
-- On phones, while a suggestion is showing, tapping that thin strip accepts it instead of moving the caret; tap elsewhere to move the caret.
+- The draft is sent to the model provider you already selected, over the normal chat path
+- Cached in memory for 45 s only; nothing is written to disk or sent elsewhere
+- The plugin itself collects nothing
 
-## AI disclosure
+## Version & author
 
-This plugin's code and documentation were written with **AIGC (AI-generated content) assistance** and have been reviewed by a human:
+- Version **0.2.3** ([changelog](CHANGELOG.md))
+- Author: 困困 (KunKun) · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
+- License: [MIT](LICENSE)
 
-- Every line was read and edited by hand; nothing was pasted in raw
-- Behaviour was verified item by item on a live DSH instance in a headless browser: the ghost text appears, `Tab` accepts, `Esc` discards, IME composition suppresses it, results are cached for 45 seconds, and the tap / long-press paths work on phones
-- Before release, the host route's authentication, the model call's cost boundary and where the data goes were checked manually
-
-Human review is not a zero-defect guarantee. If reality disagrees with this document, please open an [issue](https://github.com/KunKun24/dsh-ghost-input/issues).
-
-## License
-
-MIT
+Contains AIGC-assisted code, reviewed line by line and verified on a real instance (desktop and phone viewports).

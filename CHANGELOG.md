@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 文档：统一 README 模板（中英双语、assets/demo.gif 演示、功能 / 安装 / 配置 / 限制 / 隐私 / 版本作者）。
 - 文档：中英双语顶部切换、版本/AIGC/人工审阅/许可证徽章。
 - 文档：新增 AIGC 使用说明与人工审阅范围（宿主路由鉴权、成本边界、数据去向）。
 - 文档：README 内嵌效果截图（docs/screenshot.png）。
