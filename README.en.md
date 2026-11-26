@@ -2,16 +2,16 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.3-blue)
+![version](https://img.shields.io/badge/version-0.2.4-blue)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
-![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.2-6f42c1)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 
 Stop typing for a moment and the model finishes your sentence in grey — press `Tab` to keep it.
 
 ![Grey continuation with a Tab key cap; Tab turns it into real text](assets/demo.gif)
 
-> A DeepSeek Harness (DSH) plugin for DSH 0.2.0 or newer.
+> A DeepSeek Harness (DSH) plugin for DSH 0.2.0-rc.2 or newer (tested across 0.2.0-rc.2 → 0.2.3).
 
 ## What it does
 
@@ -34,7 +34,7 @@ It continues **your sentence**, not the next thing you should ask, and it reads 
 **Option 1 — release tarball (recommended)**
 
 ```bash
-dsh plugin --profile web add https://github.com/KunKun24/dsh-ghost-input/releases/download/v0.2.3/dsh-ghost-input-0.2.3.tgz
+dsh plugin --profile web add https://github.com/KunKun24/dsh-ghost-input/releases/download/v0.2.4/dsh-ghost-input-0.2.4.tgz
 ```
 
 **Option 2 — local source**
@@ -86,7 +86,7 @@ Sidebar → "More → 参数设置" (settings). Changes apply immediately and pe
 
 ## Version & author
 
-- Version **0.2.3** ([changelog](CHANGELOG.md))
+- Version **0.2.4** ([changelog](CHANGELOG.md))
 - Author: 困困 (KunKun) · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
 - License: [MIT](LICENSE)
 

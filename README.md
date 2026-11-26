@@ -2,16 +2,16 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.2.3-blue)
+![version](https://img.shields.io/badge/version-0.2.4-blue)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
-![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.2-6f42c1)
 ![AIGC](https://img.shields.io/badge/AIGC-assisted-ff9f43)
 
 打字停下，模型在光标后补出后半句，浅灰显示，`Tab` 收下。
 
 ![灰字续写 + Tab 键帽，按 Tab 变正文](assets/demo.gif)
 
-> DeepSeek Harness（DSH）插件，需要 DSH 0.2.0 及以上。
+> DeepSeek Harness（DSH）插件，需要 DSH 0.2.0-rc.2 及以上（0.2.0-rc.2 → 0.2.3 全系列实测可用）。
 
 ## 它做什么
 
@@ -34,7 +34,7 @@
 **方式一：Release 包（推荐）**
 
 ```bash
-dsh plugin --profile web add https://github.com/KunKun24/dsh-ghost-input/releases/download/v0.2.3/dsh-ghost-input-0.2.3.tgz
+dsh plugin --profile web add https://github.com/KunKun24/dsh-ghost-input/releases/download/v0.2.4/dsh-ghost-input-0.2.4.tgz
 ```
 
 **方式二：本地源码**
@@ -86,7 +86,7 @@ dsh plugin --profile web add link:/path/to/dsh-ghost-input
 
 ## 版本与作者
 
-- 当前版本 **0.2.3**（[更新日志](CHANGELOG.md)）
+- 当前版本 **0.2.4**（[更新日志](CHANGELOG.md)）
 - 作者：困困 · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
 - 许可证：[MIT](LICENSE)
 
